@@ -3,7 +3,7 @@ GeoDa Center Code Sandbox
 =========================
 
 This project is the code repository for the 
-`GeoDa Center blog <http://geodacenter.asu.edu/blog>`. It intends to be an
+`GeoDa Center blog <http://geodacenter.asu.edu/blog>`_. It intends to be an
 archive for diverse code snippets, functions and other useful material produced
 by the GeoDa Center team. This is a completely experimental space so do not 
 expect the reliability and stability of other projects from the GeoDa Center for
