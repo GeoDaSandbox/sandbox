@@ -2,14 +2,14 @@
 GeoDa Center Code Sandbox
 =========================
 
-This project is the code repository for the 
+This is the code repository for the 
 `GeoDa Center blog <http://geodacenter.asu.edu/blog>`_. It intends to be an
-archive for diverse code snippets, functions and other useful material produced
+archive for diverse snippets, functions and other useful material produced
 by the GeoDa Center team. This is a completely experimental space so do not 
 expect the reliability and stability of other projects from the GeoDa Center for
-Geospatial Analysis and Computation, such as GeoDa, GeoDaSpace or PySAL.
+Geospatial Analysis and Computation such as OpenGeoDa, GeoDaSpace or PySAL.
 
-Checkout the blog to find more information about the code hosted here.
+The repository is organized in different folders according to the programming language used. Check out the blog to find posts that present and explain all the goodness hosted here and follow us on Twitter (`@geodacenter <http://twitter.com/geodacenter>`_) or `Facebook <https://www.facebook.com/geodacenter>`_ to stay tuned about new posts and new code. Happy hacking!!!
 
 Contributors
 ------------
