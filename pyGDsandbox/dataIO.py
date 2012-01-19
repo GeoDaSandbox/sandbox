@@ -33,7 +33,7 @@ def df2dbf(df, dbf_path, my_specs=None):
         specs = my_specs
     else:
         type2spec = {int: ('N', 20, 0),
-                float: ('N', 36, 14),
+                float: ('N', 36, 15),
                 str: ('C', 14, 0)
                 }
         types = [type(df[i][0]) for i in df.columns]
