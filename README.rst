@@ -13,8 +13,12 @@ The repository is organized in different folders according to the programming la
 
 Contributors
 ------------
+    * Dani Arribas-Bel, @darribas <darribas@asu.edu>
 
 License
 -------
-To be determined
+Licenses of this repository vary by folder, which is to say vary by
+programming language. You can find a copy of each inside each folder and an
+overview list here:
+    * ``pyGDsandbox`` [python code]: BSD-like
 
