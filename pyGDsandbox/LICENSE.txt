@@ -1,4 +1,4 @@
-Copyright (c) 2007-2011, Sergio J. Rey
+Copyright (c) 2007-2011, GeoDa Center for Geospatial Analysis and Computation
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
