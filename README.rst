@@ -13,7 +13,7 @@ The repository is organized in different folders according to the programming la
 
 Contributors
 ------------
-    * Dani Arribas-Bel, @darribas <darribas@asu.edu>
+    * Dani Arribas-Bel, `@darribas <http://twitter.com/darribas>`_ <darribas@asu.edu>
 
 License
 -------
