@@ -2,6 +2,7 @@
 Tools work with geographical data
 '''
 
+import os, time
 import pysal as ps
 import numpy as np
 import pandas as pd
@@ -29,6 +30,7 @@ def clip_shp(shp_in, col_name, keys, shp_out=None):
                   [Optional] Path to the shapefile to be created. If None,
                   writes the file with the same name plus '_clipped' appended.
     '''
+    t0 = time.clock()
     k = list(set(keys))
     if len(k) != len(keys):
         raise Exception, "Please don't pass duplicates in keys"
@@ -45,13 +47,13 @@ def clip_shp(shp_in, col_name, keys, shp_out=None):
     full = pd.DataFrame({'full': np.array(dbi.by_col(col_name))})
     subset = pd.DataFrame({'sub': keys}, index=keys)
     to_clip = full.join(subset, on='full').dropna().index.astype(int)
-    polys = list(shpi)
     for i in to_clip:
         dbo.write(dbi[i][0])
-        shpo.write(polys[i])
+        shpo.write(shpi.get(i))
     shpo.close()
     shpi.close()
     dbo.close()
     dbi.close()
+    os.system('cp %s %s'%(shp_in[:-3]+'prj', shp_out[:-3]+'prj'))
     return shp_out
 
