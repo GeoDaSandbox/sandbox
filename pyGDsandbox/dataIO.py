@@ -71,7 +71,7 @@ def dbf2df(dbf_path, index=None, cols=False):
     '''
     db = ps.open(dbf_path)
     if cols:
-        if index not in cols:
+        if index not in cols and index:
             cols.append(index)
         vars_to_read = cols
     else:
