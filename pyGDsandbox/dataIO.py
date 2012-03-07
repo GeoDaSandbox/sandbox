@@ -83,3 +83,87 @@ def dbf2df(dbf_path, index=None, cols=False):
     else:
         return pandas.DataFrame(data)
 
+def appendcol2dbf(dbf_in,dbf_out,col_name,col_spec,col_data):
+    """
+    Function to append a column and the associated data to a DBF.
+
+    __author__ = "Nicholas Malizia <nmalizia@asu.edu>"
+
+    Arguments
+    ---------
+    dbf_in      : string
+                  name of the dbf file to be updated, including extension.
+    dbf_out     : string
+                  name of the dbf file to be updated, including extension.
+    col_name    : string
+                  name of the field to be added to dbf.
+    col_spec    : tuple
+                  the format for the tuples is (type,len,precision).
+                  valid types are 'C' for characters, 'L' for bool, 'D' for
+                  data, 'N' or 'F' for number.
+    col_data    : list
+                  a list of values to be written in the column
+
+    Example
+    -------
+    
+    Just a simple example using the ubiquitous Columbus dataset. First, 
+    specify the names of the input and output DBFs. 
+
+    >>> dbf_in = 'columbus.dbf'
+    >>> dbf_out = 'columbus_copy.dbf'
+
+    Next, give the name of the new column. 
+
+    >>> col_name = 'test'
+
+    And, the specifications associated with it. See the documentation above
+    for a further explanation of this requirement. Essentially it's a tuple
+    with three parameters: type, length and precision. 
+
+    >>> col_spec = ('N',9,0)
+
+    Finally, we need to create some data to throw in the column. Ideally, this
+    would be something that you'd already have handy (that's why you're adding
+    a new column to the DBF right?). Here though we'll just create something
+    simple like an integer ID. This could be a list of null values if the data
+    aren't ready yet. 
+
+    >>> db = ps.open(dbf_in)
+    >>> n = db.n_records
+    >>> col_data = range(n)
+
+    We pull it all together with the function created here. 
+
+    >>> appendcol2dbf(dbf_in,dbf_out,col_name,col_spec,col_data)
+
+    This will output a second DBF that can then be used to replace the
+    original DBF (this will often be the case when working with shapefiles). I
+    figured it would be more prudent to create a second file which the user
+    can then inspect and manually replace if they want rather than just
+    blindly overwriting the original. This of course could be coded as well.
+    I'll leave that up to the user though. I don't want emails complaining
+    that I deleted your data ;) 
+
+    """
+
+    # open the original dbf and create a new one with the new field
+    db = ps.open(dbf_in)
+    db_new = ps.open(dbf_out,'w')
+    db_new.header = db.header
+    db_new.header.append(col_name)
+    db_new.field_spec = db.field_spec
+    db_new.field_spec.append(col_spec)
+
+    # populate the dbf with the original and new data
+    item = 0
+    for rec in db:
+        rec_new = rec
+        rec_new.append(col_data[item])
+        db_new.write(rec_new)
+        item += 1
+
+    # close the files 
+    db_new.close()
+    db.close()
+
