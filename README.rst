@@ -15,6 +15,16 @@ Contributors
 ------------
     * Dani Arribas-Bel, `@darribas <http://twitter.com/darribas>`_ <darribas@asu.edu>
 
+Dependencies
+------------
+To effectively run all the functions on this module, you will need the
+following libraries:
+     * For Python:
+
+        + PySAL
+        + numpy
+        + pandas
+
 License
 -------
 Licenses of this repository vary by folder, which is to say vary by
