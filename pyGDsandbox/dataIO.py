@@ -7,7 +7,7 @@ pandas DataFrames, etc.
 
 import pysal as ps
 import numpy as np
-#import pandas
+import pandas
 import os
 
 def df2dbf(df, dbf_path, my_specs=None):
