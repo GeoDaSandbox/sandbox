@@ -47,7 +47,7 @@ def df2dbf(df, dbf_path, my_specs=None):
     db.close()
     return dbf_path
 
-def dbf2df(dbf_path, index=None, cols=False, incl_index=True):
+def dbf2df(dbf_path, index=None, cols=False, incl_index=False):
     '''
     Read a dbf file as a pandas.DataFrame, optionally selecting the index
     variable and which columns are to be loaded.
@@ -65,8 +65,8 @@ def dbf2df(dbf_path, index=None, cols=False, incl_index=True):
                   List with the names of the columns to be read into the
                   DataFrame. Defaults to False, which reads the whole dbf
     incl_index  : Boolean
-                  If True (default) index is included in the DataFrame as a
-                  column too
+                  If True index is included in the DataFrame as a
+                  column too. Defaults to False
 
     Returns
     -------
