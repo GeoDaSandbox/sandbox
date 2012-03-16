@@ -1,4 +1,7 @@
-For those of you interested in posting to the GeoDa Center blog, here's a short primer on how to format the text and code blocks. It's a lot easier to use this than the rich text editor provided by the blogging software. Feel free to add on, these are just the essentials.
+For those of you interested in posting to the GeoDa Center blog, here's a short primer on
+how to format the text and code blocks. It's a lot easier to use this than the rich text
+editor provided by the blogging software. Feel free to add on, these are just the
+essentials.
 
 Here's how you format the text to look like code: 
 
