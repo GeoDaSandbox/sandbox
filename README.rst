@@ -15,6 +15,7 @@ Contributors
 ------------
     * Dani Arribas-Bel, `@darribas <http://twitter.com/darribas>`_ <darribas@asu.edu>
     * Nicholas Malizia, <nmalizia@asu.edu>
+    * Serge Rey, <sjsrey@gmail.com>
 
 Dependencies
 ------------
