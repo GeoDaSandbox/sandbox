@@ -6,6 +6,7 @@ import os, time
 import pysal as ps
 import numpy as np
 import pandas as pd
+import multiprocessing as mp
 
 def clip_shp(shp_in, col_name, keys, shp_out=None):
     '''
@@ -56,4 +57,221 @@ def clip_shp(shp_in, col_name, keys, shp_out=None):
     dbi.close()
     os.system('cp %s %s'%(shp_in[:-3]+'prj', shp_out[:-3]+'prj'))
     return shp_out
+
+def pip_shps_multi(pt_shp, poly_shp, polyID_col=None, out_shp=None,
+        empty='empty'):
+    '''
+    Point in polygon operation taking as input a point and a polygon
+    shapefiles
+    ...
+
+    Arguments
+    =========
+    pt_shp          : str
+                      Path to point shapefile
+    poly_shp        : str
+                      Path to polygon shapefile
+    polyID_col      : str
+                      Name of the column in the polygon shapefile to be used as ID
+                      in the output shape
+    out_shp         : str
+                      Path to the output shapefile where to write pt_shp with a
+                      column with correspondences appended (Optional, defaults to
+                      None)
+    empty           : str
+                      String to insert if the point is not contained in any
+                      polygon. Defaults to 'empty'
+
+    Returns
+    =======
+    correspondences : list
+                      List of length len(pt_shp) with the polygon ID where the
+                      points are located
+    '''
+    def _writeShp():
+        oShp = ps.open(out_shp, 'w')
+        shp = ps.open(pt_shp)
+        oDbf = ps.open(out_shp[:-3]+'dbf', 'w')
+        dbf = ps.open(pt_shp[:-3]+'dbf')
+        oDbf.header = dbf.header
+        col_name = 'in_poly'
+        col_spec = ('C', 14, 0)
+        if polyID_col:
+            col_name = polyID_col
+            #db = ps.open(poly_shp[:-3]+'dbf')
+            #col_spec = db.field_spec[db.header.index(polyID_col)]
+        oDbf.header.append(col_name)
+        oDbf.field_spec = dbf.field_spec
+        oDbf.field_spec.append(col_spec)
+        for poly, rec, i in zip(shp, dbf, correspondences):
+            oShp.write(poly)
+            rec.append(i)
+            oDbf.write(rec)
+        shp.close()
+        oShp.close()
+        dbf.close()
+        oDbf.close()
+        prj = open(pt_shp[:-3]+'prj').read()
+        oPrj = open(out_shp[:-3]+'prj', 'w')
+        oPrj.write(prj); oPrj.close()
+        t4 = time.time()
+        print '\t', t4-t3, ' seconds to write shapefile'
+        print 'Shapefile written to %s'%out_shp
+
+    t0 = time.time()
+    polys = ps.open(poly_shp)
+    if polyID_col:
+        polyIDs = ps.open(poly_shp[:-3]+'dbf').by_col(polyID_col)
+    pl = ps.cg.PolygonLocator(polys)
+    t1 = time.time()
+    print '\t', t1-t0, ' secs to build rtree'
+
+    pts = ps.open(pt_shp)
+    lpts = list(pts)
+    parss = [(pt, pl) for pt in lpts]
+    cores = mp.cpu_count()
+    pool = mp.Pool(cores)
+    correspondences = pool.map(_poly4pt, parss)
+    t2 = time.time()
+    print '\t', t2-t1, ' secs to get correspondences'
+    if polyID_col:
+        correspondences_names= []
+        for i in correspondences:
+            try:
+                correspondences_names.append(polyIDs[int(i)])
+            except:
+                correspondences_names.append(empty)
+        correspondences = correspondences_names
+    pts.close()
+    polys.close()
+    t3 = time.time()
+    print '\t', t3-t2, ' secs to convert correspondences'
+    if out_shp:
+        _writeShp()
+    return correspondences
+
+def _poly4pt(pars):
+    pt, pl = pars
+    'Return the poly where pt is'
+    x,y = pt
+    candidates = pl.contains_point(pt)
+    for cand in candidates:
+        if cand.contains_point(pt)==1:
+            return cand.id-1 #one-offset
+    return 'out'
+
+def pip_shps(pt_shp, poly_shp, polyID_col=None, out_shp=None, empty='empty'):
+    '''
+    Point in polygon operation taking as input a point and a polygon
+    shapefiles
+    ...
+
+    Arguments
+    =========
+    pt_shp          : str
+                      Path to point shapefile
+    poly_shp        : str
+                      Path to polygon shapefile
+    polyID_col      : str
+                      Name of the column in the polygon shapefile to be used as ID
+                      in the output shape
+    out_shp         : str
+                      Path to the output shapefile where to write pt_shp with a
+                      column with correspondences appended (Optional, defaults to
+                      None)
+    empty           : str
+                      String to insert if the point is not contained in any
+                      polygon. Defaults to 'empty'
+
+    Returns
+    =======
+    correspondences : list
+                      List of length len(pt_shp) with the polygon ID where the
+                      points are located
+    '''
+    def _poly4pt(pt):
+        'Return the poly where pt is'
+        x,y = pt
+        candidates = bbs[(bbs['left']<x) & (bbs['right']>x) & \
+                (bbs['down']<y) & (bbs['up']>y)].index
+        for cand in candidates:
+            poly_cand = polys.get(cand)
+            if poly_cand.contains_point(pt)==1:
+                return cand
+        return 'out'
+    t0 = time.time()
+    polys = ps.open(poly_shp)
+    id = []
+    bbs = {'left': [], 'right': [], 'up': [], 'down': []}
+    for c, poly in enumerate(polys):
+        id.append(c)
+        bb = poly.bounding_box
+        bbs['left'].append(bb.left)
+        bbs['right'].append(bb.right)
+        bbs['up'].append(bb.upper)
+        bbs['down'].append(bb.lower)
+    if polyID_col:
+        polyIDs = ps.open(poly_shp[:-3]+'dbf').by_col(polyID_col)
+    bbs = pd.DataFrame(bbs, index=id)
+    t1 = time.time()
+    print '\t', t1-t0, ' secs to build bbs'
+
+    pts = ps.open(pt_shp)
+    lpts = list(pts)
+    correspondences = map(_poly4pt, lpts)
+    t2 = time.time()
+    print '\t', t2-t1, ' secs to get correspondences'
+    if polyID_col:
+        correspondences_names= []
+        for i in correspondences:
+            try:
+                correspondences_names.append(polyIDs[int(i)])
+            except:
+                correspondences_names.append(empty)
+        correspondences = correspondences_names
+    pts.close()
+    polys.close()
+    t3 = time.time()
+    print '\t', t3-t2, ' secs to convert correspondences'
+    if out_shp:
+        oShp = ps.open(out_shp, 'w')
+        shp = ps.open(pt_shp)
+        oDbf = ps.open(out_shp[:-3]+'dbf', 'w')
+        dbf = ps.open(pt_shp[:-3]+'dbf')
+        oDbf.header = dbf.header
+        col_name = 'in_poly'
+        col_spec = ('C', 14, 0)
+        if polyID_col:
+            col_name = polyID_col
+            #db = ps.open(poly_shp[:-3]+'dbf')
+            #col_spec = db.field_spec[db.header.index(polyID_col)]
+        oDbf.header.append(col_name)
+        oDbf.field_spec = dbf.field_spec
+        oDbf.field_spec.append(col_spec)
+        for poly, rec, i in zip(shp, dbf, correspondences):
+            oShp.write(poly)
+            rec.append(i)
+            oDbf.write(rec)
+        shp.close()
+        oShp.close()
+        dbf.close()
+        oDbf.close()
+        prj = open(pt_shp[:-3]+'prj').read()
+        oPrj = open(out_shp[:-3]+'prj', 'w')
+        oPrj.write(prj); oPrj.close()
+        print 'Shapefile written to %s'%out_shp
+    return correspondences
+
+if __name__ == "__main__":
+    import time
+    shp_link = '/Users/dani/Desktop/center_shapes_wgs84_all.shp'
+    t0 = time.time()
+    pts_link = '/Users/dani/Desktop/few_pts.shp'
+    pts_link = '/Users/dani/Desktop/us_tract_ptsWGS84.shp'
+    #test = pip_shps_rtree(pts_link, shp_link, polyID_col='nms.cn.', out_shp='/Users/dani/Desktop/us_tract_ptsWGS84joint.shp')
+    test1 = pip_shps_rtree(pts_link, shp_link, polyID_col='nms.cn.')
+    test2 = pip_shps(pts_link, shp_link, polyID_col='nms.cn.')
+    t1 = time.time()
+    print t1-t0, ' seconds'
+    cor = np.corrcoef(test1, test2)
 
