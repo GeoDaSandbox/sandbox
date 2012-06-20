@@ -88,36 +88,6 @@ def pip_shps_multi(pt_shp, poly_shp, polyID_col=None, out_shp=None,
                       List of length len(pt_shp) with the polygon ID where the
                       points are located
     '''
-    def _writeShp():
-        oShp = ps.open(out_shp, 'w')
-        shp = ps.open(pt_shp)
-        oDbf = ps.open(out_shp[:-3]+'dbf', 'w')
-        dbf = ps.open(pt_shp[:-3]+'dbf')
-        oDbf.header = dbf.header
-        col_name = 'in_poly'
-        col_spec = ('C', 14, 0)
-        if polyID_col:
-            col_name = polyID_col
-            #db = ps.open(poly_shp[:-3]+'dbf')
-            #col_spec = db.field_spec[db.header.index(polyID_col)]
-        oDbf.header.append(col_name)
-        oDbf.field_spec = dbf.field_spec
-        oDbf.field_spec.append(col_spec)
-        for poly, rec, i in zip(shp, dbf, correspondences):
-            oShp.write(poly)
-            rec.append(i)
-            oDbf.write(rec)
-        shp.close()
-        oShp.close()
-        dbf.close()
-        oDbf.close()
-        prj = open(pt_shp[:-3]+'prj').read()
-        oPrj = open(out_shp[:-3]+'prj', 'w')
-        oPrj.write(prj); oPrj.close()
-        t4 = time.time()
-        print '\t', t4-t3, ' seconds to write shapefile'
-        print 'Shapefile written to %s'%out_shp
-
     t0 = time.time()
     polys = ps.open(poly_shp)
     if polyID_col:
@@ -160,6 +130,36 @@ def _poly4pt(pars):
             return cand.id-1 #one-offset
     return 'out'
 
+def _writeShp():
+    oShp = ps.open(out_shp, 'w')
+    shp = ps.open(pt_shp)
+    oDbf = ps.open(out_shp[:-3]+'dbf', 'w')
+    dbf = ps.open(pt_shp[:-3]+'dbf')
+    oDbf.header = dbf.header
+    col_name = 'in_poly'
+    col_spec = ('C', 14, 0)
+    if polyID_col:
+        col_name = polyID_col
+        #db = ps.open(poly_shp[:-3]+'dbf')
+        #col_spec = db.field_spec[db.header.index(polyID_col)]
+    oDbf.header.append(col_name)
+    oDbf.field_spec = dbf.field_spec
+    oDbf.field_spec.append(col_spec)
+    for poly, rec, i in zip(shp, dbf, correspondences):
+        oShp.write(poly)
+        rec.append(i)
+        oDbf.write(rec)
+    shp.close()
+    oShp.close()
+    dbf.close()
+    oDbf.close()
+    prj = open(pt_shp[:-3]+'prj').read()
+    oPrj = open(out_shp[:-3]+'prj', 'w')
+    oPrj.write(prj); oPrj.close()
+    t4 = time.time()
+    print '\t', t4-t3, ' seconds to write shapefile'
+    print 'Shapefile written to %s'%out_shp
+
 def pip_shps(pt_shp, poly_shp, polyID_col=None, out_shp=None, empty='empty'):
     '''
     Point in polygon operation taking as input a point and a polygon
@@ -189,8 +189,8 @@ def pip_shps(pt_shp, poly_shp, polyID_col=None, out_shp=None, empty='empty'):
                       List of length len(pt_shp) with the polygon ID where the
                       points are located
     '''
-    def _poly4pt(pt):
-        'Return the poly where pt is'
+    def _poly4pt_pd(pt):
+        'Return the poly where pt is in pandas'
         x,y = pt
         candidates = bbs[(bbs['left']<x) & (bbs['right']>x) & \
                 (bbs['down']<y) & (bbs['up']>y)].index
@@ -218,7 +218,7 @@ def pip_shps(pt_shp, poly_shp, polyID_col=None, out_shp=None, empty='empty'):
 
     pts = ps.open(pt_shp)
     lpts = list(pts)
-    correspondences = map(_poly4pt, lpts)
+    correspondences = map(_poly4pt_pd, lpts)
     t2 = time.time()
     print '\t', t2-t1, ' secs to get correspondences'
     if polyID_col:
@@ -234,32 +234,7 @@ def pip_shps(pt_shp, poly_shp, polyID_col=None, out_shp=None, empty='empty'):
     t3 = time.time()
     print '\t', t3-t2, ' secs to convert correspondences'
     if out_shp:
-        oShp = ps.open(out_shp, 'w')
-        shp = ps.open(pt_shp)
-        oDbf = ps.open(out_shp[:-3]+'dbf', 'w')
-        dbf = ps.open(pt_shp[:-3]+'dbf')
-        oDbf.header = dbf.header
-        col_name = 'in_poly'
-        col_spec = ('C', 14, 0)
-        if polyID_col:
-            col_name = polyID_col
-            #db = ps.open(poly_shp[:-3]+'dbf')
-            #col_spec = db.field_spec[db.header.index(polyID_col)]
-        oDbf.header.append(col_name)
-        oDbf.field_spec = dbf.field_spec
-        oDbf.field_spec.append(col_spec)
-        for poly, rec, i in zip(shp, dbf, correspondences):
-            oShp.write(poly)
-            rec.append(i)
-            oDbf.write(rec)
-        shp.close()
-        oShp.close()
-        dbf.close()
-        oDbf.close()
-        prj = open(pt_shp[:-3]+'prj').read()
-        oPrj = open(out_shp[:-3]+'prj', 'w')
-        oPrj.write(prj); oPrj.close()
-        print 'Shapefile written to %s'%out_shp
+        _writeShp()
     return correspondences
 
 if __name__ == "__main__":
