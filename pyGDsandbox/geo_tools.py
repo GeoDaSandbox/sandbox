@@ -62,7 +62,7 @@ def pip_shps_multi(pt_shp, poly_shp, polyID_col=None, out_shp=None,
         empty='empty'):
     '''
     Point in polygon operation taking as input a point and a polygon
-    shapefiles
+    shapefiles (running on multicore)
     ...
 
     Arguments
@@ -119,6 +119,75 @@ def pip_shps_multi(pt_shp, poly_shp, polyID_col=None, out_shp=None,
     if out_shp:
         _writeShp()
     return correspondences
+
+def pip_xy_shp_multi(xy, poly_shp, polyID_col=None, out_shp=None,
+        empty=None):
+    '''
+    Point in polygon operation taking as input a points array and a polygon
+    shapefile (running on multicore)
+    ...
+
+    Arguments
+    =========
+    xy              : np.array
+                      nx2 array with xy coordinates
+    poly_shp        : str
+                      Path to polygon shapefile
+    polyID_col      : str
+                      Name of the column in the polygon shapefile to be used as ID
+                      in the output shape
+    out_shp         : str
+                      Path to the output shapefile where to write xy with a
+                      column with correspondences appended (Optional, defaults to
+                      None)
+    empty           : str
+                      String to insert if the point is not contained in any
+                      polygon. Defaults to None
+
+    Returns
+    =======
+    correspondences : list
+                      List of length len(xy) with the polygon ID where the
+                      points are located
+    '''
+    t0 = time.time()
+    polys = ps.open(poly_shp)
+    if polyID_col:
+        polyIDs = ps.open(poly_shp[:-3]+'dbf').by_col(polyID_col)
+    pl = ps.cg.PolygonLocator(polys)
+    t1 = time.time()
+    print '\t', t1-t0, ' secs to build rtree'
+
+    parss = zip(xy, [pl]*xy.shape[0])
+    cores = mp.cpu_count()
+    pool = mp.Pool(cores)
+    correspondences = pool.map(_poly4xy, parss)
+    t2 = time.time()
+    print '\t', t2-t1, ' secs to get correspondences'
+    if polyID_col:
+        correspondences_names= []
+        for i in correspondences:
+            try:
+                correspondences_names.append(polyIDs[int(i)])
+            except:
+                correspondences_names.append(empty)
+        correspondences = correspondences_names
+    polys.close()
+    t3 = time.time()
+    print '\t', t3-t2, ' secs to convert correspondences'
+    if out_shp:
+        _writeShp()
+    return correspondences
+
+def _poly4xy(pars):
+    'Return the poly where pt is'
+    pt, pl = pars
+    x, y = pt
+    candidates = pl.contains_point(pt)
+    for cand in candidates:
+        if cand.contains_point(pt)==1:
+            return cand.id-1 #one-offset
+    return 'out'
 
 def _poly4pt(pars):
     pt, pl = pars
@@ -239,14 +308,9 @@ def pip_shps(pt_shp, poly_shp, polyID_col=None, out_shp=None, empty='empty'):
 
 if __name__ == "__main__":
     import time
-    shp_link = '/Users/dani/Desktop/center_shapes_wgs84_all.shp'
-    t0 = time.time()
-    pts_link = '/Users/dani/Desktop/few_pts.shp'
-    pts_link = '/Users/dani/Desktop/us_tract_ptsWGS84.shp'
-    #test = pip_shps_rtree(pts_link, shp_link, polyID_col='nms.cn.', out_shp='/Users/dani/Desktop/us_tract_ptsWGS84joint.shp')
-    test1 = pip_shps_rtree(pts_link, shp_link, polyID_col='nms.cn.')
-    test2 = pip_shps(pts_link, shp_link, polyID_col='nms.cn.')
-    t1 = time.time()
-    print t1-t0, ' seconds'
-    cor = np.corrcoef(test1, test2)
+    shpp = ps.examples.get_path('columbus.shp')
+    shp = ps.open(shpp)
+    xy = np.random.random((1000000, 2))
+    xy[0] = shp[0].centroid
+    c = pip_xy_shp_multi(xy, shpp)
 
