@@ -187,6 +187,29 @@ def appendcol2dbf(dbf_in,dbf_out,col_name,col_spec,col_data,replace=False):
         os.remove(dbf_in)
         os.rename(dbf_out, dbf_in)
 
+def multi_model_tab(models, coefs2show=['betas', 'significance']):
+    out = []
+    for c, model in enumerate(models):
+        if 'significance' in coefs2show:
+            model.significance = np.array([signify(t[1]) for t in model.t_stat])
+        outm = pd.DataFrame({par: getattr(model, par).flatten() for par in coefs2show},\
+                index=model.name_x).rename(columns={'significance': 'p'})
+        coli = pd.MultiIndex.from_tuples([('M-%i'%(c+1), col) \
+                for col in outm.columns.values])
+        outm.columns = coli
+        out.append(outm)
+    out = pd.concat(out, axis=1)
+    return out
+
+def signify(p):
+    if p <= 0.001:
+        return '***'
+    elif p > 0.01 and p <= 0.05:
+        return '**'
+    elif p > 0.005 and p <= 0.1:
+        return '*'
+    else:
+        return ''
 
 def updatelisashp(lm,shp,alpha=0.05,norm=False):
     """
