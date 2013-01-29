@@ -187,7 +187,7 @@ def appendcol2dbf(dbf_in,dbf_out,col_name,col_spec,col_data,replace=False):
         os.remove(dbf_in)
         os.rename(dbf_out, dbf_in)
 
-def multi_model_tab(models, coefs2show=['betas', 'significance'], decs=4):
+def multi_model_tab(models, coefs2show=['betas', 'significance'], decs=4, model_names=None):
     '''
     Generate a pandas DataFrame with results from several models
     ...
@@ -205,6 +205,10 @@ def multi_model_tab(models, coefs2show=['betas', 'significance'], decs=4):
                   '*' for 10%) will be added.
     decs        : int
                   Decimals to which round the output
+    model_names : list
+                  Optional argument to pass model names to be inserted as
+                  column names. If None (default), it just creates them as
+                  'M-i' where i is an integer.
 
     Returns
     -------
@@ -212,12 +216,14 @@ def multi_model_tab(models, coefs2show=['betas', 'significance'], decs=4):
                   Pandas DataFrame object with output
     '''
     out = []
+    if not model_names:
+        model_names = ['M-%i'%(i+1) for i in range(len(models))]
     for c, model in enumerate(models):
         if 'significance' in coefs2show:
             model.significance = np.array([signify(t[1]) for t in model.t_stat])
         outm = pd.DataFrame({par: getattr(model, par).flatten() for par in coefs2show},\
                 index=model.name_x).rename(columns={'significance': 'p'})
-        coli = pd.MultiIndex.from_tuples([('M-%i'%(c+1), col) \
+        coli = pd.MultiIndex.from_tuples([(model_names[c], col) \
                 for col in outm.columns.values])
         outm.columns = coli
         out.append(outm)
