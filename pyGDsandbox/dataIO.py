@@ -7,7 +7,7 @@ pandas DataFrames, etc.
 
 import pysal as ps
 import numpy as np
-import pandas
+import pandas as pd
 import os
 
 def df2dbf(df, dbf_path, my_specs=None):
@@ -86,10 +86,10 @@ def dbf2df(dbf_path, index=None, cols=False, incl_index=False):
     if index:
         index = db.by_col(index)
         db.close()
-        return pandas.DataFrame(data, index=index)
+        return pd.DataFrame(data, index=index)
     else:
         db.close()
-        return pandas.DataFrame(data)
+        return pd.DataFrame(data)
 
 def appendcol2dbf(dbf_in,dbf_out,col_name,col_spec,col_data,replace=False):
     """
