@@ -187,7 +187,30 @@ def appendcol2dbf(dbf_in,dbf_out,col_name,col_spec,col_data,replace=False):
         os.remove(dbf_in)
         os.rename(dbf_out, dbf_in)
 
-def multi_model_tab(models, coefs2show=['betas', 'significance']):
+def multi_model_tab(models, coefs2show=['betas', 'significance'], decs=4):
+    '''
+    Generate a pandas DataFrame with results from several models
+    ...
+
+    Arguments
+    ---------
+    models      : list
+                  list-like object with all the pysal.spreg models
+    coefs2show  : list
+                  Attributes from a pysal.spreg model that will be pull out
+                  into the table. Note that it will only work if the
+                  attributes relate to the variables (e.g. betas, ses).
+                  If 'significance' is included, a column per model with
+                  significance level stars ('***' for 1%, '**' for 5% and
+                  '*' for 10%) will be added.
+    decs        : int
+                  Decimals to which round the output
+
+    Returns
+    -------
+    out         : DataFrame
+                  Pandas DataFrame object with output
+    '''
     out = []
     for c, model in enumerate(models):
         if 'significance' in coefs2show:
@@ -199,9 +222,29 @@ def multi_model_tab(models, coefs2show=['betas', 'significance']):
         outm.columns = coli
         out.append(outm)
     out = pd.concat(out, axis=1)
+    for col in out:
+        try:
+            out[col] = out[col].apply(lambda x: str(np.round(x, decimals=decs)))
+        except:
+            pass
+    addons = pd.DataFrame({'': ['']*out.shape[1], \
+            'R^2': np.array([[try_r2(m, decs=decs)]+['']*(len(coefs2show)-1) for m in models]).flatten(), \
+            'N': np.array([[str(m.y.shape[0])]+['']*(len(coefs2show)-1) for m in models]).flatten(), \
+            }, \
+            index=out.columns).T
+    out = pd.concat([out, addons], axis=0)
+    out = out.fillna('').replace('nan', '')
     return out
 
+def try_r2(model, decs=4):
+    'Attempt to return R^2'
+    try:
+        return str(np.round(model.r2, decimals=decs))
+    except:
+        return ''
+
 def signify(p):
+    'Turn p-value into significance star(s)'
     if p <= 0.001:
         return '***'
     elif p > 0.01 and p <= 0.05:
