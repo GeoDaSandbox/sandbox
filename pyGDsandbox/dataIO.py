@@ -218,11 +218,12 @@ def multi_model_tab(models, coefs2show=['betas', 'significance'], decs=4, model_
     out = []
     if not model_names:
         model_names = ['M-%i'%(i+1) for i in range(len(models))]
+    model_names = ['%i-%s'%(i+1, j) for i,j in enumerate(model_names)]
     for c, model in enumerate(models):
         if 'significance' in coefs2show:
-            model.significance = np.array([signify(t[1]) for t in model.t_stat])
+            model.significance = np.array(map(signify, get_pvals(model)))
         outm = pd.DataFrame({par: getattr(model, par).flatten() for par in coefs2show},\
-                index=model.name_x).rename(columns={'significance': 'p'})
+                index=name_vars(model)).rename(columns={'significance': 'p'})
         coli = pd.MultiIndex.from_tuples([(model_names[c], col) \
                 for col in outm.columns.values])
         outm.columns = coli
@@ -233,6 +234,7 @@ def multi_model_tab(models, coefs2show=['betas', 'significance'], decs=4, model_
             out[col] = out[col].apply(lambda x: str(np.round(x, decimals=decs)))
         except:
             pass
+    out = out.sort()
     addons = pd.DataFrame({'': ['']*out.shape[1], \
             'R^2': np.array([[try_r2(m, decs=decs)]+['']*(len(coefs2show)-1) for m in models]).flatten(), \
             'N': np.array([[str(m.y.shape[0])]+['']*(len(coefs2show)-1) for m in models]).flatten(), \
@@ -241,6 +243,18 @@ def multi_model_tab(models, coefs2show=['betas', 'significance'], decs=4, model_
     out = pd.concat([out, addons], axis=0)
     out = out.fillna('').replace('nan', '')
     return out
+
+def name_vars(model):
+    try:
+        return model.name_z
+    except:
+        return model.name_x
+
+def get_pvals(model):
+    try:
+        return [t[1] for t in model.t_stat]
+    except:
+        return [t[1] for t in model.z_stat]
 
 def try_r2(model, decs=4):
     'Attempt to return R^2'
