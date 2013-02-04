@@ -8,7 +8,7 @@ pandas DataFrames, etc.
 import pysal as ps
 import numpy as np
 import pandas as pd
-import os
+import os, ast
 
 def df2dbf(df, dbf_path, my_specs=None):
     '''
@@ -273,6 +273,22 @@ def signify(p):
         return '*'
     else:
         return ''
+
+def cols_as_mi(cols):
+    '''
+    Parse columns read from a csv as pd.MultiIndex
+    ...
+
+    Argument
+    --------
+    cols    : list
+              List of strings read from a csv written originally from a
+              DataFrame with MultiIndex columns
+    Returns
+    -------
+    cols_mi : MultiIndex
+    '''
+    return pd.MultiIndex.from_tuples([ast.literal_eval(t) for t in cols])
 
 def updatelisashp(lm,shp,alpha=0.05,norm=False):
     """
