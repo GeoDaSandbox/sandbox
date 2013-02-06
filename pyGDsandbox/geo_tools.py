@@ -7,6 +7,7 @@ import pysal as ps
 import numpy as np
 import pandas as pd
 import multiprocessing as mp
+from scipy.spatial.distance import cdist
 
 def clip_shp(shp_in, col_name, keys, shp_out=None):
     '''
@@ -305,6 +306,65 @@ def pip_shps(pt_shp, poly_shp, polyID_col=None, out_shp=None, empty='empty'):
     if out_shp:
         _writeShp()
     return correspondences
+
+def dist_A2B(a, b, metric='euclidean', nearestK=None, multicore=False):
+    '''
+    Calculate distance from every point in A to every point in B. Really it is
+    a memory efficient wrapper for scipy.spatial.cdist with DataFrame support.
+    Output is returned in a Series with hierarchical index where the first
+    level are observations from A and second is observations from B.
+
+    NOTE: it assumes coordinates in A and B projected
+    ...
+
+    Arguments
+    ---------
+    a           : DataFrame
+                  Table with points in group A. Every column is each of the
+                  dimensions for the distance to be computed on.
+    b           : DataFrame
+                  Table with points in group B. Every column is each of the
+                  dimensions for the distance to be computed on.
+    metric      : str
+                  Desired metric to be used to compute the distance. Defaults to
+                  'ecuclidean'. See options at
+                  http://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.cdist.html#scipy.spatial.distance.cdist
+                  Note that really, the function calculates cdist(i, B) for every
+                  i in A.
+    nearestK    : int
+                  Number of nearest elements in B to keep the distance from A.
+                  Defaults to None so all are kept.
+    multicore   : boolean
+                  Switcher to span processes to multiple cores. Activating it
+                  (defaults) speeds up the computation but also uses up more memory
+
+    Returns
+    -------
+    ab          : Series
+                  Table hierarchically indexed of distances. It uses indices
+                  provided in A and B
+    '''
+    if multicore:
+        pool = mp.Pool(mp.cpu_count())
+        dists = pd.concat(pool.map(_a2B, [(row[1], b, metric, nearestK) for row in a.iterrows()]))
+    else:
+        dists = pd.concat(map(_a2B, [(row[1], b, metric, nearestK) for row in a.iterrows()]))
+    return dists
+
+def _a2B(aBmetricNearestK):
+    a, B, metric, nearestK = aBmetricNearestK
+    dists = cdist(a.values[None, :], B.values, metric=metric).flatten()
+    id = pd.MultiIndex.from_arrays([np.array([a.name]*B.shape[0]), \
+            B.index.values])
+    s = pd.Series(dists, index=id)
+    if nearestK:
+        _ = s.sort()
+        sk = s[:nearestK]
+        del s
+        return sk
+    else:
+        return s
+
 
 if __name__ == "__main__":
     import time
