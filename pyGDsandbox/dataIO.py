@@ -7,8 +7,8 @@ pandas DataFrames, etc.
 
 import pysal as ps
 import numpy as np
-import pandas
-import os
+import pandas as pd
+import os, ast
 
 def df2dbf(df, dbf_path, my_specs=None):
     '''
@@ -86,10 +86,10 @@ def dbf2df(dbf_path, index=None, cols=False, incl_index=False):
     if index:
         index = db.by_col(index)
         db.close()
-        return pandas.DataFrame(data, index=index)
+        return pd.DataFrame(data, index=index)
     else:
         db.close()
-        return pandas.DataFrame(data)
+        return pd.DataFrame(data)
 
 def appendcol2dbf(dbf_in,dbf_out,col_name,col_spec,col_data,replace=False):
     """
@@ -187,6 +187,108 @@ def appendcol2dbf(dbf_in,dbf_out,col_name,col_spec,col_data,replace=False):
         os.remove(dbf_in)
         os.rename(dbf_out, dbf_in)
 
+def multi_model_tab(models, coefs2show=['betas', 'significance'], decs=4, model_names=None):
+    '''
+    Generate a pandas DataFrame with results from several models
+    ...
+
+    Arguments
+    ---------
+    models      : list
+                  list-like object with all the pysal.spreg models
+    coefs2show  : list
+                  Attributes from a pysal.spreg model that will be pull out
+                  into the table. Note that it will only work if the
+                  attributes relate to the variables (e.g. betas, ses).
+                  If 'significance' is included, a column per model with
+                  significance level stars ('***' for 1%, '**' for 5% and
+                  '*' for 10%) will be added.
+    decs        : int
+                  Decimals to which round the output
+    model_names : list
+                  Optional argument to pass model names to be inserted as
+                  column names. If None (default), it just creates them as
+                  'M-i' where i is an integer.
+
+    Returns
+    -------
+    out         : DataFrame
+                  Pandas DataFrame object with output
+    '''
+    out = []
+    if not model_names:
+        model_names = ['M-%i'%(i+1) for i in range(len(models))]
+    model_names = ['%i-%s'%(i+1, j) for i,j in enumerate(model_names)]
+    for c, model in enumerate(models):
+        if 'significance' in coefs2show:
+            model.significance = np.array(map(signify, get_pvals(model)))
+        outm = pd.DataFrame({par: getattr(model, par).flatten() for par in coefs2show},\
+                index=name_vars(model)).rename(columns={'significance': 'p'})
+        coli = pd.MultiIndex.from_tuples([(model_names[c], col) \
+                for col in outm.columns.values])
+        outm.columns = coli
+        out.append(outm)
+    out = pd.concat(out, axis=1)
+    for col in out:
+        try:
+            out[col] = out[col].apply(lambda x: str(np.round(x, decimals=decs)))
+        except:
+            pass
+    out = out.sort()
+    addons = pd.DataFrame({'': ['']*out.shape[1], \
+            'R^2': np.array([[try_r2(m, decs=decs)]+['']*(len(coefs2show)-1) for m in models]).flatten(), \
+            'N': np.array([[str(m.y.shape[0])]+['']*(len(coefs2show)-1) for m in models]).flatten(), \
+            }, \
+            index=out.columns).T
+    out = pd.concat([out, addons], axis=0)
+    out = out.fillna('').replace('nan', '')
+    return out
+
+def name_vars(model):
+    try:
+        return model.name_z
+    except:
+        return model.name_x
+
+def get_pvals(model):
+    try:
+        return [t[1] for t in model.t_stat]
+    except:
+        return [t[1] for t in model.z_stat]
+
+def try_r2(model, decs=4):
+    'Attempt to return R^2'
+    try:
+        return str(np.round(model.r2, decimals=decs))
+    except:
+        return ''
+
+def signify(p):
+    'Turn p-value into significance star(s)'
+    if p <= 0.001:
+        return '***'
+    elif p > 0.01 and p <= 0.05:
+        return '**'
+    elif p > 0.005 and p <= 0.1:
+        return '*'
+    else:
+        return ''
+
+def cols_as_mi(cols):
+    '''
+    Parse columns read from a csv as pd.MultiIndex
+    ...
+
+    Argument
+    --------
+    cols    : list
+              List of strings read from a csv written originally from a
+              DataFrame with MultiIndex columns
+    Returns
+    -------
+    cols_mi : MultiIndex
+    '''
+    return pd.MultiIndex.from_tuples([ast.literal_eval(t) for t in cols])
 
 def updatelisashp(lm,shp,alpha=0.05,norm=False):
     """
