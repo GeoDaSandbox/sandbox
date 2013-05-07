@@ -265,14 +265,15 @@ def try_r2(model, decs=4):
 
 def signify(p):
     'Turn p-value into significance star(s)'
-    if p <= 0.001:
-        return '***'
+    if p <= 0.01:
+        s = '***'
     elif p > 0.01 and p <= 0.05:
-        return '**'
-    elif p > 0.005 and p <= 0.1:
-        return '*'
+        s = '**'
+    elif p > 0.05 and p <= 0.1:
+        s = '*'
     else:
-        return ''
+        s = ''
+    return s
 
 def cols_as_mi(cols):
     '''
