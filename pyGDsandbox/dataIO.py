@@ -1,18 +1,21 @@
 '''
 dataIO: module for code related to data files manipulation
 
-Find here classes and functions to deal with DBFs, CSVs as well as Numpy arrays,
-pandas DataFrames, etc.
+Find here classes and functions to deal with DBFs, CSVs as well as Numpy
+arrays, pandas DataFrames, etc.
 '''
 
 import pysal as ps
 import numpy as np
 import pandas as pd
-import os, ast
+import os
+import ast
+from shutil import copyfile
+
 
 def df2dbf(df, dbf_path, my_specs=None):
     '''
-    Convert a pandas.DataFrame into a dbf. 
+    Convert a pandas.DataFrame into a dbf.
 
     __author__  = "Dani Arribas-Bel <darribas@asu.edu> "
     ...
@@ -34,11 +37,11 @@ def df2dbf(df, dbf_path, my_specs=None):
         specs = my_specs
     else:
         type2spec = {int: ('N', 20, 0),
-                np.int64: ('N', 20, 0),
-                float: ('N', 36, 15),
-                np.float64: ('N', 36, 15),
-                str: ('C', 14, 0)
-                }
+                     np.int64: ('N', 20, 0),
+                     float: ('N', 36, 15),
+                     np.float64: ('N', 36, 15),
+                     str: ('C', 14, 0)
+                     }
         types = [type(df[i][0]) for i in df.columns]
         specs = [type2spec[t] for t in types]
     db = ps.open(dbf_path, 'w')
@@ -48,6 +51,7 @@ def df2dbf(df, dbf_path, my_specs=None):
         db.write(row)
     db.close()
     return dbf_path
+
 
 def dbf2df(dbf_path, index=None, cols=False, incl_index=False):
     '''
@@ -91,7 +95,9 @@ def dbf2df(dbf_path, index=None, cols=False, incl_index=False):
         db.close()
         return pd.DataFrame(data)
 
-def appendcol2dbf(dbf_in,dbf_out,col_name,col_spec,col_data,replace=False):
+
+def appendcol2dbf(dbf_in, dbf_out, col_name, col_spec, col_data,
+                  replace=False):
     """
     Function to append a column and the associated data to a DBF.
 
@@ -104,7 +110,7 @@ def appendcol2dbf(dbf_in,dbf_out,col_name,col_spec,col_data,replace=False):
                   extension.
     dbf_out     : string
                   name and path of the new file to be created, including
-                  extension. 
+                  extension.
     col_name    : string
                   name of the field to be added to dbf.
     col_spec    : tuple
@@ -113,27 +119,27 @@ def appendcol2dbf(dbf_in,dbf_out,col_name,col_spec,col_data,replace=False):
                   data, 'N' or 'F' for number.
     col_data    : list
                   a list of values to be written in the column, note the length
-                  of this list should match the number of records in the original
-                  dbf.
+                  of this list should match the number of records in the
+                  original dbf.
     replace     : boolean
                   if true, replace existing dbf file
 
     Example
     -------
-    
-    Just a simple example using the ubiquitous Columbus dataset. First, 
-    specify the names of the input and output DBFs. 
+
+    Just a simple example using the ubiquitous Columbus dataset. First,
+    specify the names of the input and output DBFs.
 
     >>> dbf_in = 'columbus.dbf'
     >>> dbf_out = 'columbus_copy.dbf'
 
-    Next, give the name of the column to be added. 
+    Next, give the name of the column to be added.
 
     >>> col_name = 'test'
 
     Also, provide the specifications associated with the new column. See the
     documentation above for a further explanation of this requirement.
-    Essentially it's a tuple with three parameters: type, length and precision. 
+    Essentially it's a tuple with three parameters: type, length and precision.
 
     >>> col_spec = ('N',9,0)
 
@@ -141,29 +147,29 @@ def appendcol2dbf(dbf_in,dbf_out,col_name,col_spec,col_data,replace=False):
     would be something that you'd already have handy (that's why you're adding
     a new column to the DBF right?). Here though we'll just create something
     simple like an integer ID. This could be a list of null values if the data
-    aren't ready yet and you want a placeholder. 
+    aren't ready yet and you want a placeholder.
 
     >>> db = ps.open(dbf_in)
     >>> n = db.n_records
     >>> col_data = range(n)
 
-    We pull it all together with the function created here. 
+    We pull it all together with the function created here.
 
     >>> appendcol2dbf(dbf_in,dbf_out,col_name,col_spec,col_data)
 
     This will output a second DBF that can then be used to replace the
     original DBF (this will often be the case when working with shapefiles). I
-    figured it would be more prudent to have the function by default create a 
+    figured it would be more prudent to have the function by default create a
     second file which the user can then inspect and manually replace if they
     want rather than just blindly overwriting the original. The latter is an
     option. Use at your own risk - I don't want complaints that I deleted your
-    data ;) 
+    data ;)
 
     """
 
     # open the original dbf and create a new one with the new field
     db = ps.open(dbf_in)
-    db_new = ps.open(dbf_out,'w')
+    db_new = ps.open(dbf_out, 'w')
     db_new.header = db.header
     db_new.header.append(col_name)
     db_new.field_spec = db.field_spec
@@ -177,17 +183,25 @@ def appendcol2dbf(dbf_in,dbf_out,col_name,col_spec,col_data,replace=False):
         db_new.write(rec_new)
         item += 1
 
-    # close the files 
+    # close the files
     db_new.close()
     db.close()
 
-    # the following text will delete the old dbf and replace it with the new one
-    # retaining the name of the original file. 
-    if replace is True: 
+    # the following text will delete the old dbf and replace it with the new
+    #one retaining the name of the original file.
+    if replace is True:
         os.remove(dbf_in)
         os.rename(dbf_out, dbf_in)
 
-def multi_model_tab(models, coefs2show=['betas', 'significance'], decs=4, model_names=None):
+    # copy shp and shx
+    if not os.path.exists(dbf_out[:-4] + '.shp'):
+        copyfile(dbf_in[:-4] + '.shp', dbf_out[:-4] + '.shp')
+    if not os.path.exists(dbf_out[:-4] + '.shx'):
+        copyfile(dbf_in[:-4] + '.shx', dbf_out[:-4] + '.shx')
+
+
+def multi_model_tab(models, coefs2show=['betas', 'significance'], decs=4,
+                    model_names=None):
     '''
     Generate a pandas DataFrame with results from several models
     ...
@@ -217,15 +231,15 @@ def multi_model_tab(models, coefs2show=['betas', 'significance'], decs=4, model_
     '''
     out = []
     if not model_names:
-        model_names = ['M-%i'%(i+1) for i in range(len(models))]
-    model_names = ['%i-%s'%(i+1, j) for i,j in enumerate(model_names)]
+        model_names = ['M-%i' % (i + 1) for i in range(len(models))]
+    model_names = ['%i-%s' % (i + 1, j) for i, j in enumerate(model_names)]
     for c, model in enumerate(models):
         if 'significance' in coefs2show:
             model.significance = np.array(map(signify, get_pvals(model)))
-        outm = pd.DataFrame({par: getattr(model, par).flatten() for par in coefs2show},\
-                index=name_vars(model)).rename(columns={'significance': 'p'})
-        coli = pd.MultiIndex.from_tuples([(model_names[c], col) \
-                for col in outm.columns.values])
+        outm = pd.DataFrame({par: getattr(model, par).flatten() for par in coefs2show},
+                            index=name_vars(model)).rename(columns={'significance': 'p'})
+        coli = pd.MultiIndex.from_tuples([(model_names[c], col)
+                                         for col in outm.columns.values])
         outm.columns = coli
         out.append(outm)
     out = pd.concat(out, axis=1)
@@ -235,14 +249,15 @@ def multi_model_tab(models, coefs2show=['betas', 'significance'], decs=4, model_
         except:
             pass
     out = out.sort()
-    addons = pd.DataFrame({'': ['']*out.shape[1], \
-            'R^2': np.array([[try_r2(m, decs=decs)]+['']*(len(coefs2show)-1) for m in models]).flatten(), \
-            'N': np.array([[str(m.y.shape[0])]+['']*(len(coefs2show)-1) for m in models]).flatten(), \
-            }, \
-            index=out.columns).T
+    addons = pd.DataFrame({'': [''] * out.shape[1],
+                          'R^2': np.array([[try_r2(m, decs=decs)] + [''] * (len(coefs2show) - 1)
+                          for m in models]).flatten(),
+                          'N': np.array([[str(m.y.shape[0])] + [''] * (len(coefs2show) - 1)
+                          for m in models]).flatten(), }, index=out.columns).T
     out = pd.concat([out, addons], axis=0)
     out = out.fillna('').replace('nan', '')
     return out
+
 
 def name_vars(model):
     try:
@@ -250,11 +265,13 @@ def name_vars(model):
     except:
         return model.name_x
 
+
 def get_pvals(model):
     try:
         return [t[1] for t in model.t_stat]
     except:
         return [t[1] for t in model.z_stat]
+
 
 def try_r2(model, decs=4):
     'Attempt to return R^2'
@@ -262,6 +279,7 @@ def try_r2(model, decs=4):
         return str(np.round(model.r2, decimals=decs))
     except:
         return ''
+
 
 def signify(p):
     'Turn p-value into significance star(s)'
@@ -274,6 +292,7 @@ def signify(p):
     else:
         s = ''
     return s
+
 
 def cols_as_mi(cols):
     '''
@@ -291,11 +310,12 @@ def cols_as_mi(cols):
     '''
     return pd.MultiIndex.from_tuples([ast.literal_eval(t) for t in cols])
 
-def updatelisashp(lm,shp,alpha=0.05,norm=False):
+
+def updatelisashp(lm, shp, alpha=0.05, norm=False):
     """
 
     Updates the DBF of a shapefile to include the results of a LISA object from
-    PySAL.     
+    PySAL.
 
     __author__ = "Nicholas Malizia <nmalizia@asu.edu>"
 
@@ -309,21 +329,21 @@ def updatelisashp(lm,shp,alpha=0.05,norm=False):
               nominal significance level
     norm    : boolean
               use the standard normal approximation data to identify significance
-              
+
 
     Example
     -------
 
     First, we need to create the local moran object using PySAL. Again, we'll be
     using the columbus dataset. Here, we'll be looking for clustering of
-    criminal activity. See the PySAL documentation for a full explanation of how 
-    to run a local moran and how to interpret the results. 
+    criminal activity. See the PySAL documentation for a full explanation of how
+    to run a local moran and how to interpret the results.
 
     >>> import pysal as ps
     >>> import numpy as np
     >>> np.random.seed(10)
-    >>> w = ps.open(pysal.examples.get_path("columbus.gal")).read()
-    >>> f = ps.open(pysal.examples.get_path("columbus.dbf"))
+    >>> w = ps.open(ps.examples.get_path("columbus.gal")).read()
+    >>> f = ps.open(ps.examples.get_path("columbus.dbf"))
     >>> y = np.array(f.by_col['CRIME'])
     >>> lm = ps.esda.moran.Moran_Local(y,w,transformation="r",permutations=99)
 
@@ -334,7 +354,7 @@ def updatelisashp(lm,shp,alpha=0.05,norm=False):
     than those based on a standard normal approximation. We could use the latter
     by changing the "norm" parameter to True. Also, it should be obvious, but
     it's worth stating, the shapefile name specified here has to correspond to
-    the shapefile that was used in the creation of the local Moran object. 
+    the shapefile that was used in the creation of the local Moran object.
 
     >>> shp = "columbus"
     >>> alpha = 0.05
@@ -344,7 +364,7 @@ def updatelisashp(lm,shp,alpha=0.05,norm=False):
 
     >>> updatelisashp(lm, shp, alpha)
 
-    The updated shapefile can then be opened in your favorite GIS software! 
+    The updated shapefile can then be opened in your favorite GIS software!
 
     """
     # count the observations
@@ -352,9 +372,9 @@ def updatelisashp(lm,shp,alpha=0.05,norm=False):
 
     # identify which observations are significant using the appropriate p-values
     if norm is True:
-        sig = lm.p_z_sim<alpha
+        sig = lm.p_z_sim < alpha
     else:
-        sig = lm.p_sim<alpha
+        sig = lm.p_sim < alpha
 
     sig_ids = np.array(range(lm.n))[sig]
 
@@ -363,20 +383,20 @@ def updatelisashp(lm,shp,alpha=0.05,norm=False):
         data_p = lm.p_z_sim
     else:
         data_p = lm.p_sim
-    
+
     # create a list of lisa categories to add to the dbf
-    data_q = [0]*n
+    data_q = [0] * n
     for i in sig_ids:
         data_q[i] = lm.q[i]
 
     # prep parameters for changing the dbf
     dbf_in = shp + ".dbf"
     dbf_out = shp + "_copy.dbf"
-    col_name = ['quadrat', 'pvalue']    
-    col_spec = [('N',9,0), ('F',10,8)]
+    col_name = ['quadrat', 'pvalue']
+    col_spec = [('N', 9, 0), ('F', 10, 8)]
     col_data = [data_q, data_p]
 
     # add the quadrat and pvalue columns to the data
     for i in range(2):
-        appendcol2dbf(dbf_in,dbf_out,col_name[i],col_spec[i],col_data[i],\
-        replace=True)
+        appendcol2dbf(dbf_in, dbf_out, col_name[i], col_spec[i], col_data[i],
+                      replace=True)
