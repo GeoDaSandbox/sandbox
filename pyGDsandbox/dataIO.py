@@ -267,9 +267,9 @@ def signify(p):
     'Turn p-value into significance star(s)'
     if p <= 0.01:
         s = '***'
-    elif p > 0.01 and p <= 0.05:
+    elif 0.01 < p <= 0.05:
         s = '**'
-    elif p > 0.05 and p <= 0.1:
+    elif 0.05 < p <= 0.1:
         s = '*'
     else:
         s = ''
