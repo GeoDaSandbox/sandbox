@@ -199,6 +199,43 @@ def appendcol2dbf(dbf_in, dbf_out, col_name, col_spec, col_data,
     if not os.path.exists(dbf_out[:-4] + '.shx'):
         copyfile(dbf_in[:-4] + '.shx', dbf_out[:-4] + '.shx')
 
+def exclude_fe(txt, prefixes):
+    '''
+    Remove lines from an output string that contain the keyword in `prefixes`
+
+    This is good to eliminate FE rows from a summary output in a model
+    ...
+
+    Arguments
+    ---------
+    txt         : str
+                  Summary output in string format
+    prefixes    : str
+                  Keyword common to all the FE variables
+
+    Returns
+    -------
+    out         : str
+                  Summary output in string format without FE lines
+    '''
+    if not isinstance(prefixes, list):
+        prefixes = [prefixes]
+    out = ''
+    lines = txt.split('\n')
+    isfe = False
+    for line in lines:
+        for prefix in prefixes:
+            if prefix not in line:
+                out += line
+                out += '\n'
+            else:
+                isfe = True
+    if isfe:
+        if len(prefixes) > 1 and isinstance(prefixes, list):
+            out += '\n\nModel includes FE on %s'%tuple(', '.join(prefixes))
+        else:
+            out += '\n\nModel includes FE on %s'%prefixes[0]
+    return out
 
 def multi_model_tab(models, coefs2show=['betas', 'significance'], decs=4,
                     model_names=None):
