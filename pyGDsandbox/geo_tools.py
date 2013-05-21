@@ -8,6 +8,12 @@ import numpy as np
 import pandas as pd
 import multiprocessing as mp
 from scipy.spatial.distance import cdist
+try:
+    from ogr import osr
+except:
+    print ("WARNING: GDAL (and ogr) are not installed. This may create",
+            "some methods to not work")
+ 
 
 def clip_shp(shp_in, col_name, keys, shp_out=None):
     '''
@@ -365,6 +371,43 @@ def _a2B(aBmetricNearestK):
     else:
         return s
 
+def transCRS(db, prj_link, lat='lat', lon='lon'):
+    '''
+    Re-project 'lon' and 'lat' columns from WGS84 to prj_link and put it in
+    'x' and 'y' columns
+    ...
+
+    Arguments
+    ---------
+    db          : DataFrame
+                  DataFrame with coordinates to be reprojected
+    prj_link    : str
+                  Path to .prj to project lon/lat data
+    lat         : str
+                  Column name in db for lattitude
+    lon         : str
+                  Column name in db for longitude
+    Returns
+    -------
+    db          : DataFrame
+                  Original DataFrame to which columns 'x' and 'y' have been
+                  added with projected coordinates
+    '''
+    orig = osr.SpatialReference()
+    orig.SetWellKnownGeogCS("WGS84")
+    target = osr.SpatialReference()
+    #See link for this hack
+    #http://forum.osgearth.org/Proj4-error-No-translation-for-lambert-conformal-conic-to-PROJ-4-format-is-known-td7579032.html
+    wkt = (open(prj_link).read()).replace('Lambert_Conformal_Conic', \
+            'Lambert_Conformal_Conic_2SP')
+    target.ImportFromWkt(wkt)
+    #target.ImportFromWkt(open(prj_link).read()) #original
+    trCRS = osr.CoordinateTransformation(orig, target)
+    prjd_xys = db[['lon', 'lat']].values.tolist()
+    prjd_xys = np.array(trCRS.TransformPoints(prjd_xys))[:, :2]
+    db['x'] = prjd_xys[:, 0]
+    db['y'] = prjd_xys[:, 1]
+    return db
 
 if __name__ == "__main__":
     import time
