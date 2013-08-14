@@ -313,11 +313,12 @@ def get_pvals(model):
 def try_r2(model, decs=4):
     'Attempt to return R^2'
     try:
-        if hasattr('r2'):
+        if hasattr(model, 'r2'):
             return str(np.round(model.r2, decimals=decs))
         else:
             return str(np.round(model.pr2, decimals=decs))
     except:
+        print "No R2 or pseudo R2 found"
         return ''
 
 
