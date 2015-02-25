@@ -42,7 +42,7 @@ def df2dbf(df, dbf_path, my_specs=None):
                      np.float64: ('N', 36, 15),
                      str: ('C', 14, 0)
                      }
-        types = [type(df[i][0]) for i in df.columns]
+        types = [type(df[i].iloc[0]) for i in df.columns]
         specs = [type2spec[t] for t in types]
     db = ps.open(dbf_path, 'w')
     db.header = list(df.columns)
